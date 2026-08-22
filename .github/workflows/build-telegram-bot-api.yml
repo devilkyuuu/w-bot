@@ -21,8 +21,9 @@ jobs:
             --volume "${GITHUB_WORKSPACE}:/workspace" \
             --workdir /workspace \
             ghcr.io/parkervcp/yolks:python_3.11 \
-            /bin/ash -euxc '
-              apk add --no-cache gperf linux-headers openssl-dev zlib-dev
+            /bin/bash -euxc '
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake gperf libssl-dev zlib1g-dev
               git init telegram-bot-api-source
               cd telegram-bot-api-source
               git remote add origin https://github.com/tdlib/telegram-bot-api.git
