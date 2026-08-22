@@ -12,7 +12,7 @@ from telegram.ext import ContextTypes
 
 from wbot.access import AccessPolicy, Decision
 from wbot.config import Settings
-from wbot.database import Repository
+from wbot.database import ApprovalRepository
 from wbot.domain import PostResult, ProductResult, SourceKind, SupportedUrl
 from wbot.errors import ERROR_TEXT, BotError, ErrorCode
 from wbot.exchange import ExchangeService
@@ -33,7 +33,7 @@ MESSAGE_LIMIT = 4096
 class BotServices:
     settings: Settings
     access: AccessPolicy
-    repository: Repository
+    repository: ApprovalRepository
     publisher: Publisher
     video: VideoExtractor
     amiami: AmiAmiExtractor
