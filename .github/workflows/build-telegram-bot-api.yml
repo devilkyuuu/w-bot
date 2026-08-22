@@ -1,0 +1,45 @@
+name: Build Telegram Bot API for WispByte
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in WispByte's Python image
+        shell: bash
+        run: |
+          mkdir build-output
+          docker run --rm --user root \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            --workdir /workspace \
+            ghcr.io/parkervcp/yolks:python_3.11 \
+            /bin/ash -euxc '
+              apk add --no-cache gperf linux-headers openssl-dev zlib-dev
+              git init telegram-bot-api-source
+              cd telegram-bot-api-source
+              git remote add origin https://github.com/tdlib/telegram-bot-api.git
+              git fetch --depth 1 origin adfd7f6a8e990272851777eeb3ae0def4216f161
+              git checkout --detach FETCH_HEAD
+              test "$(git rev-parse HEAD)" = adfd7f6a8e990272851777eeb3ae0def4216f161
+              git submodule update --init --recursive --depth 1
+              cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/workspace/telegram-bot-api-install
+              cmake --build build --target install --parallel 2
+              cp /workspace/telegram-bot-api-install/bin/telegram-bot-api /workspace/build-output/
+            '
+          test -x build-output/telegram-bot-api
+
+      - name: Upload Alpine binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-alpine
+          path: build-output/telegram-bot-api
+          if-no-files-found: error
+          retention-days: 7
