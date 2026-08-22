@@ -6,7 +6,10 @@ import shutil
 from collections import deque
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Generic, TypeVar
 from uuid import uuid4
+
+T = TypeVar("T")
 
 
 class WorkspaceLimitError(ValueError):
@@ -90,7 +93,7 @@ def _tree_size(root: Path) -> int:
     return total
 
 
-class MediaGate[T]:
+class MediaGate(Generic[T]):
     def __init__(self) -> None:
         self._semaphore = asyncio.Semaphore(1)
 
