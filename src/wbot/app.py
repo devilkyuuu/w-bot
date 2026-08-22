@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, cast
+from typing import Any
 
-from psycopg_pool import AsyncConnectionPool
 from telegram import Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler
 
 from wbot.access import AccessPolicy
 from wbot.commands import BotServices, Commands
 from wbot.config import Settings
-from wbot.database import ConnectionPool, Repository
+from wbot.database import SQLiteRepository
 from wbot.exchange import ExchangeService
 from wbot.extractors.amiami import AmiAmiExtractor
 from wbot.extractors.nin_nin import NinNinExtractor
@@ -22,8 +21,7 @@ from wbot.workspace import MediaGate, cleanup_stale
 
 
 def build_application(settings: Settings) -> Application[Any, Any, Any, Any, Any, Any]:
-    pool = AsyncConnectionPool(settings.database_url, open=False)
-    repository = Repository(cast(ConnectionPool, pool))
+    repository = SQLiteRepository(settings.database_path)
     access = AccessPolicy(settings.owner_user_id, repository)
     exchange = ExchangeService()
     video = VideoExtractor(
@@ -48,13 +46,11 @@ def build_application(settings: Settings) -> Application[Any, Any, Any, Any, Any
     async def post_init(application: Application[Any, Any, Any, Any, Any, Any]) -> None:
         del application
         cleanup_stale(settings.media_tmp_root)
-        await pool.open()
         await repository.initialize()
 
     async def post_shutdown(application: Application[Any, Any, Any, Any, Any, Any]) -> None:
         del application
         await telegram_client.aclose()
-        await pool.close()
 
     base = settings.local_api_base_url.rstrip("/")
     application = (
