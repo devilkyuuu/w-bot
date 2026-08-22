@@ -16,7 +16,7 @@ class Settings:
     telegram_api_id: int
     telegram_api_hash: str
     owner_user_id: int
-    database_url: str
+    database_path: Path
     local_api_base_url: str
     media_tmp_root: Path
     max_download_bytes: int
@@ -28,7 +28,11 @@ class Settings:
         telegram_api_id = _positive_int(env, "TELEGRAM_API_ID")
         telegram_api_hash = _required(env, "TELEGRAM_API_HASH")
         owner_user_id = _positive_int(env, "OWNER_USER_ID")
-        database_url = _required(env, "DATABASE_URL")
+        database_path = Path(
+            env.get("DATABASE_PATH", "/home/container/wbot.sqlite3").strip()
+        )
+        if not str(database_path):
+            raise ConfigError("DATABASE_PATH must not be empty")
 
         local_api_base_url = env.get(
             "TELEGRAM_LOCAL_API_BASE_URL", "http://telegram-api:8081"
@@ -51,7 +55,7 @@ class Settings:
             telegram_api_id=telegram_api_id,
             telegram_api_hash=telegram_api_hash,
             owner_user_id=owner_user_id,
-            database_url=database_url,
+            database_path=database_path,
             local_api_base_url=local_api_base_url.rstrip("/"),
             media_tmp_root=media_tmp_root,
             max_download_bytes=max_download_bytes,
