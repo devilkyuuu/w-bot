@@ -1,0 +1,32 @@
+W BOT THIRD-PARTY NOTICES
+=========================
+
+Telegram Bot API 10.2
+Source commit: adfd7f6a8e990272851777eeb3ae0def4216f161
+https://github.com/tdlib/telegram-bot-api/tree/adfd7f6a8e990272851777eeb3ae0def4216f161
+Boost Software License 1.0. A copy is in licenses\telegram-bot-api\.
+
+FFmpeg 8.0.1 LGPL build by BtbN
+Asset: ffmpeg-n8.0.1-66-g27b8d1a017-win64-lgpl-8.0.zip
+https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-02-28-12-59
+FFmpeg is licensed under the GNU Lesser General Public License and related
+component licenses. License files supplied with the archive are in
+licenses\ffmpeg\.
+
+Python application packages
+The application includes Python 3.12 and packages including beautifulsoup4,
+httpx, psutil 7.x, python-telegram-bot 22.x, yt-dlp, certifi, and their runtime
+dependencies. Their project metadata and license notices are included in the
+PyInstaller application directory where supplied by those packages.
+
+PyInstaller 6.16.0
+https://pyinstaller.org/
+PyInstaller is distributed under the GPL 2.0 license with a special exception
+allowing distribution of bundled applications.
+
+psutil 7.x
+https://github.com/giampaolo/psutil
+BSD 3-Clause License.
+
+This file identifies the principal bundled projects; it does not replace their
+full license texts or copyright notices.

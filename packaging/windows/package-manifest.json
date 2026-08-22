@@ -1,0 +1,42 @@
+{
+  "required_files": [
+    "Setup Bot.cmd",
+    "Start Bot.cmd",
+    "Stop Bot.cmd",
+    "Bot Status.cmd",
+    "Show Bot Logs.cmd",
+    "Create Desktop Shortcuts.cmd",
+    "app/w-bot.exe",
+    "telegram-api/telegram-bot-api.exe",
+    "tools/ffmpeg.exe",
+    "tools/ffprobe.exe",
+    "scripts/create-shortcuts.ps1",
+    "README-WINDOWS.txt",
+    "THIRD-PARTY-NOTICES.txt"
+  ],
+  "forbidden_names": [
+    "settings.json",
+    "runtime.json",
+    ".env",
+    "wbot.sqlite3"
+  ],
+  "token_pattern": "[0-9]{6,12}:[A-Za-z0-9_-]{30,}",
+  "smoke_checks": [
+    {
+      "path": "app/w-bot.exe",
+      "arguments": ["--version"]
+    },
+    {
+      "path": "telegram-api/telegram-bot-api.exe",
+      "arguments": ["--version"]
+    },
+    {
+      "path": "tools/ffmpeg.exe",
+      "arguments": ["-version"]
+    },
+    {
+      "path": "tools/ffprobe.exe",
+      "arguments": ["-version"]
+    }
+  ]
+}

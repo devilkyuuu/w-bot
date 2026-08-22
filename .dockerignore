@@ -1,0 +1,15 @@
+.env
+.git
+.venv
+__pycache__
+*.pyc
+*.mp4
+*.webm
+*.part
+*.bin
+outputs
+tests
+work
+docs
+northflank
+docker
