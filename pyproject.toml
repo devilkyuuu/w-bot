@@ -6,11 +6,10 @@ build-backend = "hatchling.build"
 name = "telegram-w-media-bot"
 version = "0.1.0"
 description = "Private Telegram /w media bot"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = [
   "beautifulsoup4>=4.13,<5",
   "httpx>=0.28,<0.29",
-  "psycopg[binary,pool]>=3.2,<4",
   "python-telegram-bot>=22.8,<23",
   "yt-dlp>=2026.7.7",
 ]
@@ -25,6 +24,7 @@ dev = [
 
 [project.scripts]
 wbot = "wbot.app:main"
+wbot-wispbyte = "wbot.wispbyte:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wbot"]
@@ -38,14 +38,13 @@ markers = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 strict = true
 packages = ["wbot"]
-
