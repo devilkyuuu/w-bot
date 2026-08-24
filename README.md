@@ -1,13 +1,11 @@
-# Private Telegram `/w` media bot
+# Telegram media bot
 
-This bot replies to `/w <one supported link>` with the useful content itself. It sends no progress
-message. In an approved group, any member can invoke it with a command, while ordinary messages
-remain hidden from the bot by Telegram Group Privacy Mode.
+This bot replies to `/w <one supported link>` with the content itself.
 
 Supported sources:
 
 - TikTok and public Facebook videos: playable MP4, up to five minutes and 1080p.
-- Public X posts: text, up to four photos, or a video.
+- Public X posts: text, up to four photos, video.
 - AmiAmi and Nin-Nin Game products: up to five product images plus name, manufacturer, yen price,
   and approximate euro price from the ECB reference rate.
 
@@ -18,18 +16,13 @@ Docker is not required, and the package already contains Python, FFmpeg, and Tel
 API. No port forwarding or public inbound port is needed: the local service binds only to
 `127.0.0.1:8081`.
 
-Build and download it without supplying any credentials to GitHub:
+Installation:
 
-1. Open the repository's **Actions** tab.
-2. Select **Build Portable Windows Package**.
-3. Choose **Run workflow**.
-4. Download **w-bot-windows-x64** from the Artifacts section after the run turns green.
-5. Extract the downloaded ZIP to a normal local folder, preferably outside OneDrive or another
-   synchronized location.
-6. In the extracted `W-Bot` folder, double-click **Setup Bot.cmd** once.
+1. Extract the ZIP to a normal local folde.
+2. In the extracted `W-Bot` folder, double-click **Setup Bot.cmd** once.
 
 Setup asks locally for the BotFather token, Telegram API ID, Telegram API hash, and owner user ID.
-GitHub never receives these values. The token and API hash are encrypted at rest with current-user
+The token and API hash are encrypted at rest with current-user
 Windows DPAPI; another computer or Windows user cannot decrypt them and must run setup again.
 
 Setup creates four Desktop shortcuts: **Start W Bot**, **Stop W Bot**, **W Bot Status**, and
@@ -88,8 +81,7 @@ messages. It stores only approved numeric group IDs in a small local SQLite data
 /w https://www.nin-nin-game.com/en/...html
 ```
 
-Only one HTTPS URL is accepted. Short retrieval failures receive one short error reply; there is no
-“getting the video” message.
+Only one HTTPS URL is accepted. Short retrieval failures receive one short error reply.
 
 ## Optional legacy hosting
 
@@ -100,7 +92,7 @@ alternatives, not part of the Windows setup.
 
 ### Legacy runtime configuration
 
-Never commit real values. Configure these as encrypted runtime secrets:
+Never commit real values. Configure these as encrypted runtime values:
 
 ```text
 BOT_TOKEN
@@ -109,7 +101,7 @@ TELEGRAM_API_HASH
 OWNER_USER_ID
 ```
 
-Non-secret configuration:
+Configuration:
 
 ```text
 DATABASE_PATH=/home/container/wbot.sqlite3
