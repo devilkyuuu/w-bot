@@ -18,7 +18,7 @@ API. No port forwarding or public inbound port is needed: the local service bind
 
 ## Installation:
 
-1. Extract the ZIP to a normal local folde.
+1. Extract the ZIP to a local folder.
 2. In the extracted `W-Bot` folder, double-click **Setup Bot.cmd** once.
 
 Setup asks locally for the BotFather token, Telegram API ID, Telegram API hash, and owner user ID.
