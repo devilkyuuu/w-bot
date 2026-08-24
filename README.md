@@ -1,6 +1,6 @@
 # Telegram media bot
 
-This bot replies to `/w <one supported link>` with the content itself.
+This bot replies to `/w <supported link>` with the content itself.
 
 Supported sources:
 
@@ -9,14 +9,14 @@ Supported sources:
 - AmiAmi and Nin-Nin Game products: up to five product images plus name, manufacturer, yen price,
   and approximate euro price from the ECB reference rate.
 
-## Recommended: portable Windows package
+Recommended: portable Windows package
 
 The simplest home-hosting option is the portable package for 64-bit Windows 10 or Windows 11.
 Docker is not required, and the package already contains Python, FFmpeg, and Telegram's Local Bot
 API. No port forwarding or public inbound port is needed: the local service binds only to
 `127.0.0.1:8081`.
 
-Installation:
+## Installation:
 
 1. Extract the ZIP to a normal local folde.
 2. In the extracted `W-Bot` folder, double-click **Setup Bot.cmd** once.
