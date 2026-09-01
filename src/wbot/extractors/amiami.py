@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import html
 import json
 import re
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote, urljoin, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -14,63 +16,93 @@ from wbot.errors import RetrievalError
 from wbot.extractors.common import download_asset, fetch_bytes
 from wbot.workspace import JobWorkspace
 
-AMIAMI_DOMAINS = ("amiami.com",)
+AMIAMI_JAPANESE_DOMAINS = ("amiami.jp",)
+MAKER_TRANSLATIONS = {
+    "グッドスマイルカンパニー": "Good Smile Company",
+    "スクウェア・エニックス": "Square Enix",
+}
 
 
 class AmiAmiExtractor:
+    def __init__(self) -> None:
+        self._translations: dict[str, str] = {}
+
     async def extract(self, url: SupportedUrl, workspace: JobWorkspace) -> ProductResult:
         code = parse_qs(urlsplit(url.normalized).query).get("gcode", [""])[0]
         if not re.fullmatch(r"[A-Za-z0-9_-]+", code):
             raise RetrievalError
-        api_url = f"https://api.amiami.com/api/v1.0/item?gcode={quote(code)}&lang=eng"
-        try:
-            payload, _ = await fetch_bytes(
-                api_url,
-                allowed_domains=AMIAMI_DOMAINS,
-                headers={"x-user-key": "amiami_dev"},
-            )
-            data = json.loads(payload)
-            item = data.get("item", data) if isinstance(data, dict) else {}
-            product = _from_api(item)
-            embedded = data.get("_embedded", {}) if isinstance(data, dict) else {}
-            product = (
-                product[0],
-                product[1],
-                product[2],
-                list(dict.fromkeys([*product[3], *_collect_image_urls(embedded)])),
-            )
-        except Exception:
-            page, _ = await fetch_bytes(url.normalized, allowed_domains=AMIAMI_DOMAINS)
-            product = _from_html(page, url.normalized)
+        page_url = f"https://www.amiami.jp/top/detail/detail?gcode={quote(code)}"
+        page, _ = await fetch_bytes(
+            page_url,
+            allowed_domains=AMIAMI_JAPANESE_DOMAINS,
+        )
+        product = _from_html(page, page_url)
 
-        images = await _download_images(product[3], workspace.path, AMIAMI_DOMAINS)
+        images = await _download_images(
+            product[3],
+            workspace.path,
+            AMIAMI_JAPANESE_DOMAINS,
+        )
         if not images:
             raise RetrievalError
-        return ProductResult(product[0], product[1], product[2], tuple(images))
+        maker = MAKER_TRANSLATIONS.get(product[1], product[1]) if product[1] else None
+        translated_name: str | None = None
+        if len(product[0].encode("utf-8")) <= 500:
+            try:
+                async with asyncio.timeout(5):
+                    translated_name = await self._translate_title(code, product[0])
+            except Exception:
+                pass
+        return ProductResult(product[0], maker, product[2], tuple(images), translated_name)
 
-
-def _from_api(item: object) -> tuple[str, str | None, Decimal, list[str]]:
-    if not isinstance(item, dict):
-        raise RetrievalError
-    title = _string(item, "gname", "sname", "name")
-    maker = _string(item, "maker_name", "maker", "manufacturer", required=False)
-    price = _decimal(item, "min_price", "price", "list_price")
-    image_urls = _collect_image_urls(item)
-    if not title or price is None:
-        raise RetrievalError
-    return title, maker, price, image_urls
+    async def _translate_title(self, code: str, title: str) -> str:
+        cached = self._translations.get(code)
+        if cached is not None:
+            return cached
+        query = urlencode({"q": title, "langpair": "ja|en", "mt": "1"})
+        payload, _ = await fetch_bytes(
+            f"https://api.mymemory.translated.net/get?{query}",
+            allowed_domains=("mymemory.translated.net",),
+            max_bytes=1_000_000,
+        )
+        data = json.loads(payload)
+        response = data.get("responseData", {}) if isinstance(data, dict) else {}
+        translated = response.get("translatedText") if isinstance(response, dict) else None
+        if not isinstance(translated, str) or not translated.strip():
+            raise RetrievalError
+        result = html.unescape(translated.strip())
+        self._translations[code] = result
+        return result
 
 
 def _from_html(page: bytes, base_url: str) -> tuple[str, str | None, Decimal, list[str]]:
+    raw = page.decode("utf-8", errors="replace")
     soup = BeautifulSoup(page, "html.parser")
     title_tag = soup.select_one('meta[property="og:title"]') or soup.select_one("h1")
-    title = _tag_value(title_tag)
+    title_match = re.search(r"sname_simple\s*=\s*'([^']+)'", raw)
+    title = html.unescape(title_match.group(1).strip()) if title_match else _tag_value(title_tag)
     text = soup.get_text("\n", strip=True)
-    maker_match = re.search(r"(?:Maker|Manufacturer)\s*[:\uFF1A]\s*([^\n]+)", text, re.I)
-    price_match = re.search(r"(?:JPY|¥)\s*([0-9][0-9,]*)", text)
+    maker_script = re.search(r"maker_name\s*=\s*'([^']+)'", raw)
+    maker_match = re.search(
+        r"(?:Maker|Manufacturer)\s*[:\uFF1A]\s*([^\n]+)", text, re.I
+    )
+    price_match = re.search(
+        r"販売価格\s*(?:[0-9]+%OFF\s*)?([0-9][0-9,]*)円",
+        text,
+    ) or re.search(r"(?:JPY|¥)\s*([0-9][0-9,]*)", text)
     if not title or not price_match:
         raise RetrievalError
-    images = [
+    maker: str | None = None
+    if maker_script:
+        maker = html.unescape(maker_script.group(1).strip())
+    elif maker_match:
+        maker = maker_match.group(1).strip()
+    japanese_images = re.findall(
+        r"https://img\.amiami\.jp/images/product/(?:main|review)/[^\"'<>\s]+\.(?:jpe?g|png|webp)",
+        raw,
+        re.I,
+    )
+    images = japanese_images or [
         urljoin(base_url, value)
         for tag in soup.select('[data-image-large-src], meta[property="og:image"]')
         if isinstance(
@@ -80,59 +112,10 @@ def _from_html(page: bytes, base_url: str) -> tuple[str, str | None, Decimal, li
     ]
     return (
         title,
-        maker_match.group(1).strip() if maker_match else None,
+        maker,
         Decimal(price_match.group(1).replace(",", "")),
-        images,
+        list(dict.fromkeys(images)),
     )
-
-
-def _string(
-    item: dict[str, Any],
-    *keys: str,
-    required: bool = True,
-) -> str | None:
-    for key in keys:
-        value = item.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    if required:
-        raise RetrievalError
-    return None
-
-
-def _decimal(item: dict[str, Any], *keys: str) -> Decimal | None:
-    for key in keys:
-        value = item.get(key)
-        if isinstance(value, int | float | str) and not isinstance(value, bool):
-            try:
-                return Decimal(str(value).replace(",", "")).quantize(Decimal("1"))
-            except InvalidOperation:
-                continue
-    return None
-
-
-def _collect_image_urls(value: object) -> list[str]:
-    found: list[str] = []
-
-    def visit(current: object, key: str = "") -> None:
-        if isinstance(current, dict):
-            for child_key, child in current.items():
-                visit(child, str(child_key).lower())
-        elif isinstance(current, list):
-            for child in current:
-                visit(child, key)
-        elif isinstance(current, str) and (
-            "image" in key or re.search(r"\.(?:jpe?g|png|webp)(?:\?|$)", current, re.I)
-        ):
-            if current.startswith("//"):
-                current = f"https:{current}"
-            elif current.startswith("/"):
-                current = urljoin("https://img.amiami.com", current)
-            if current.startswith("https://") and current not in found:
-                found.append(current)
-
-    visit(value)
-    return found
 
 
 def _tag_value(tag: Any) -> str | None:

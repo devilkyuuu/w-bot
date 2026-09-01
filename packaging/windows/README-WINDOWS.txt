@@ -13,6 +13,16 @@ FIRST SETUP
    user ID when prompted. The token and API hash are not displayed as you type.
 4. Setup creates or refreshes four Desktop shortcuts.
 
+TELEGRAM GROUP SETUP
+1. In BotFather, run /setprivacy, select this bot, and choose Disable. This is
+   required so Telegram delivers ordinary link messages instead of commands only.
+2. Add the bot to the desired groups as an ordinary member, never as an admin.
+3. The owner sends /approve once in each approved group. Use /revoke to disable it.
+
+Members use the bot by sending one supported HTTPS link by itself. The bot silently
+ignores ordinary conversation, unsupported links, unapproved groups, and messages
+containing more than one link. It does not log message text.
+
 DAILY USE
 - Start W Bot: starts the bot and local Telegram API in the background.
 - Stop W Bot: safely stops both background services.

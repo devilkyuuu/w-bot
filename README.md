@@ -1,22 +1,33 @@
 # Telegram media bot
 
-This bot replies to `/w <supported link>` with the content itself.
+This bot replies when a supported link is sent by itself, with no progress chatter.
 
 Supported sources:
 
 - TikTok and public Facebook videos: playable MP4, up to five minutes and 1080p.
 - Public X posts: text, up to four photos, video.
 - AmiAmi and Nin-Nin Game products: up to five product images plus name, manufacturer, yen price,
-  and approximate euro price from the ECB reference rate.
+  and approximate euro price from the ECB reference rate. AmiAmi Global links are resolved through
+  the matching Japanese product page and include a best-effort English title translation.
 
-Recommended: portable Windows package
+## Recommended: portable Windows package
 
 The simplest home-hosting option is the portable package for 64-bit Windows 10 or Windows 11.
 Docker is not required, and the package already contains Python, FFmpeg, and Telegram's Local Bot
 API. No port forwarding or public inbound port is needed: the local service binds only to
 `127.0.0.1:8081`.
 
-## Installation:
+### Build and download
+
+1. Open the repository's **Actions** tab.
+2. Select **Build Portable Windows Package**.
+3. Choose **Run workflow**. Wait for the build to finish.
+4. Download **w-bot-windows-x64** from the completed workflow's artifacts.
+
+GitHub never receives the bot token, Telegram API hash, owner ID, approved group IDs, or local
+configuration: the workflow builds only the public program files.
+
+### Installation
 
 1. Extract the ZIP to a local folder.
 2. In the extracted `W-Bot` folder, double-click **Setup Bot.cmd** once.
@@ -56,11 +67,11 @@ user and machine.
 ## Telegram setup
 
 1. Create the bot with `@BotFather` and keep the token private.
-2. In BotFather, run `/setprivacy`, select the bot, and choose **Enable**.
+2. In BotFather, run `/setprivacy`, select the bot, and choose **Disable**. Telegram must deliver
+   ordinary group messages so the bot can recognize links that are not commands.
 3. Run `/setcommands` and enter:
 
    ```text
-   w - Show content from a supported link
    approve - Allow this group (owner only)
    revoke - Remove this group (owner only)
    ```
@@ -68,20 +79,23 @@ user and machine.
 4. Add the bot to a group as an ordinary member. Never grant administrator rights.
 5. The owner sends `/approve` in that group once. `/revoke` disables it again.
 
-The bot intentionally ignores unapproved groups, other users' private chats, and non-command group
-messages. It stores only approved numeric group IDs in a small local SQLite database.
+Telegram delivers ordinary group text to the bot after Privacy Mode is disabled. The bot checks
+locally for one supported standalone link, silently ignores everything else, and does not log
+message text. It also ignores unapproved groups and other users' private chats. It stores only
+approved numeric group IDs in a small local SQLite database.
 
-## Commands
+## Supported link messages
 
 ```text
-/w https://www.tiktok.com/...
-/w https://www.facebook.com/...
-/w https://x.com/.../status/...
-/w https://www.amiami.com/eng/detail?gcode=...
-/w https://www.nin-nin-game.com/en/...html
+https://www.tiktok.com/...
+https://www.facebook.com/...
+https://x.com/.../status/...
+https://www.amiami.com/eng/detail?gcode=...
+https://www.nin-nin-game.com/en/...html
 ```
 
-Only one HTTPS URL is accepted. Short retrieval failures receive one short error reply.
+The message must contain only one HTTPS URL. Unsupported links and ordinary conversation are
+silent. A supported link that cannot be retrieved receives one short error reply.
 
 ## Optional legacy hosting
 

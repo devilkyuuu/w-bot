@@ -1,2 +1,1 @@
-"""Private Telegram `/w` media bot."""
-
+"""Private Telegram bare-link media bot."""

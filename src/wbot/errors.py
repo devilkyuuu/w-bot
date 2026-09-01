@@ -12,7 +12,7 @@ class ErrorCode(Enum):
 
 
 ERROR_TEXT = {
-    ErrorCode.BAD_REQUEST: "Send one supported link after /w.",
+    ErrorCode.BAD_REQUEST: "Send one supported link by itself.",
     ErrorCode.UNSUPPORTED: "That link isn't supported.",
     ErrorCode.TOO_LONG: "That video is longer than 5 minutes.",
     ErrorCode.TOO_LARGE: "That file is too large to send.",

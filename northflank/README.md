@@ -85,11 +85,11 @@ Deploy `telegram-api` first. When its logs say the Bot API server has started, d
 
 In BotFather:
 
-1. Confirm `/setprivacy` is **Enabled**.
-2. Set `/setcommands` to the three commands shown in the root README.
+1. Confirm `/setprivacy` is **Disabled** so Telegram delivers bare group links to the bot.
+2. Set `/setcommands` to the two commands shown in the root README.
 3. Add the bot to the intended group as a normal member, without administrator rights.
 4. As the owner, send `/approve` once in the group.
-5. Send `/w <a supported public link>`.
+5. Send one supported public HTTPS link by itself.
 
 The normal result is a direct reply containing the playable video, X content, or product album.
 There is no progress message.

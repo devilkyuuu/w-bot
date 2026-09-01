@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CommandHandler
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from wbot.access import AccessPolicy
 from wbot.commands import BotServices, Commands
@@ -63,7 +63,7 @@ def build_application(settings: Settings) -> Application[Any, Any, Any, Any, Any
         .post_shutdown(post_shutdown)
         .build()
     )
-    application.add_handler(CommandHandler("w", commands.w))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, commands.media))
     application.add_handler(CommandHandler("approve", commands.approve))
     application.add_handler(CommandHandler("revoke", commands.revoke))
     application.bot_data["services"] = services

@@ -1,18 +1,18 @@
-# Telegram `/w` Media Bot Specification
+# Telegram Media Bot Specification
 
 ## Purpose
 
-Build a private Telegram bot for an owner-approved set of group chats. A user sends `/w <link>` and the bot replies to that command with the useful content from the link, without progress chatter.
+Build a private Telegram bot for an owner-approved set of group chats. A user sends one supported link by itself and the bot replies with the useful content from the link, without progress chatter.
 
 ## Privacy and access
 
-- Telegram Group Privacy Mode stays enabled.
+- Telegram Group Privacy Mode is disabled so bare link messages reach the bot.
 - The bot is never a group administrator.
-- The only normal user command is `/w <link>`.
-- The bot processes `/w` only in owner-approved groups and in the owner's private chat for testing.
+- Normal users send one supported HTTPS link by itself; `/approve` and `/revoke` remain owner-only commands.
+- The bot processes supported links only in owner-approved groups and in the owner's private chat for testing.
 - Unapproved groups receive no response.
 - Owner-only approval and revocation commands may send a one-line administrative acknowledgement.
-- Ordinary group conversation is not logged or stored.
+- Ordinary group conversation and unsupported links are immediately ignored and are not logged or stored.
 - Secrets never enter source control or application logs.
 
 ## Supported links and output
@@ -44,23 +44,26 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 - Put the caption on the first image using this shape:
 
   ```text
-  <b>Product Name</b>
-  Manufacturer
+  <b>Japanese Product Name</b>
+  <i>Approximate English Translation</i>
   ¥12,345
   ≈ €76.54
+  Manufacturer
   ```
 
 - Do not prefix the manufacturer with `Maker:` or `Manufacturer:`.
 - Use the displayed Japanese-yen product price.
 - Convert JPY to EUR with the latest available European Central Bank reference rate and mark the result as approximate.
 - If manufacturer extraction fails, send the useful gallery and prices without inventing a manufacturer.
+- Resolve AmiAmi Global `gcode` values through the matching Japanese storefront page when the Global API is blocked.
+- Translate only the public Japanese product title through MyMemory, cache it for the bot session, and keep the Japanese album usable when translation fails.
 
 ## Interaction and errors
 
-- Supported syntax: `/w <one URL>`.
-- A missing, malformed, multiple, or unsupported URL receives a short error reply.
+- Supported syntax: one standalone supported HTTPS URL.
+- Missing, malformed, multiple, and unsupported URLs are silent.
 - Source failures receive a short error reply.
-- The bot replies to the command message so the result retains context.
+- The bot replies to the link message so the result retains context.
 - No `Getting the video…`, progress update, success acknowledgement, or explanatory footer.
 
 ## Storage and processing
@@ -82,8 +85,8 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 
 ## Acceptance criteria
 
-- Privacy Mode is visibly enabled and the bot is not an administrator.
-- `/w <link>` works in an approved test group and is silent in an unapproved group.
+- Privacy Mode is visibly disabled and the bot is not an administrator.
+- A bare supported link works in an approved test group and is silent in an unapproved group.
 - A public video over 50 MB and at most 5 minutes is posted as a playable Telegram video.
 - Videos over 5 minutes are rejected before the full download whenever metadata permits.
 - AmiAmi and Nin-Nin sample products each return up to 5 ordered gallery images with the required caption.
