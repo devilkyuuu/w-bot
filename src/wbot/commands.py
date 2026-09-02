@@ -12,7 +12,7 @@ from telegram.ext import ContextTypes
 
 from wbot.access import AccessPolicy, Decision
 from wbot.config import Settings
-from wbot.database import ApprovalRepository
+from wbot.database import ApprovalRepository, MediaCategory
 from wbot.domain import PostResult, ProductResult, SourceKind, SupportedUrl
 from wbot.errors import ERROR_TEXT, BotError, ErrorCode
 from wbot.exchange import ExchangeService
@@ -21,7 +21,7 @@ from wbot.extractors.nin_nin import NinNinExtractor
 from wbot.extractors.video import VideoExtractor
 from wbot.extractors.x_post import XPostExtractor
 from wbot.publisher import Publisher, PublishError
-from wbot.url_policy import RequestSyntaxError, UnsupportedUrlError, parse_w_request
+from wbot.url_policy import RequestSyntaxError, UnsupportedUrlError, parse_media_request
 from wbot.workspace import JobWorkspace, MediaGate
 
 LOGGER = logging.getLogger("wbot")
@@ -47,27 +47,25 @@ class Commands:
     def __init__(self, services: BotServices) -> None:
         self.services = services
 
-    async def w(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def media(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.effective_message
         user = update.effective_user
         chat = update.effective_chat
         if message is None or user is None or chat is None or not message.text:
             return
 
-        decision = await self._access_decision(user.id, chat.id, chat.type, context)
+        try:
+            supported = parse_media_request(message.text)
+        except (RequestSyntaxError, UnsupportedUrlError):
+            return
+
+        decision = await self._access_decision(
+            user.id, chat.id, chat.type, supported.kind, context
+        )
         if decision is Decision.IGNORE:
             return
         if decision is Decision.BOT_MUST_NOT_BE_ADMIN:
             await message.reply_text("Remove my admin rights before using me.")
-            return
-
-        try:
-            supported = parse_w_request(message.text)
-        except RequestSyntaxError:
-            await message.reply_text(ERROR_TEXT[ErrorCode.BAD_REQUEST])
-            return
-        except UnsupportedUrlError:
-            await message.reply_text(ERROR_TEXT[ErrorCode.UNSUPPORTED])
             return
 
         started = time.monotonic()
@@ -140,11 +138,61 @@ class Commands:
         await self.services.repository.revoke_chat(chat.id)
         await message.reply_text("Revoked.")
 
+    async def social_off(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "social", enabled=False)
+
+    async def social_on(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "social", enabled=True)
+
+    async def figures_off(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "figures", enabled=False)
+
+    async def figures_on(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "figures", enabled=True)
+
+    async def _set_media_category(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        category: MediaCategory,
+        *,
+        enabled: bool,
+    ) -> None:
+        del context
+        message = update.effective_message
+        user = update.effective_user
+        chat = update.effective_chat
+        if message is None or user is None or chat is None:
+            return
+        if not self.services.access.can_manage(user.id) or chat.type not in {
+            "group",
+            "supergroup",
+        }:
+            return
+        if not await self.services.repository.is_chat_approved(chat.id):
+            return
+
+        await self.services.repository.set_media_category_enabled(
+            chat.id, category, enabled=enabled
+        )
+        labels = {"social": "Social media", "figures": "Figure websites"}
+        state = "enabled" if enabled else "disabled"
+        await message.reply_text(f"{labels[category]} {state}.")
+
     async def _access_decision(
         self,
         user_id: int,
         chat_id: int,
         chat_type: str,
+        source: SourceKind,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> Decision:
         preliminary = await self.services.access.evaluate(
@@ -155,6 +203,10 @@ class Commands:
         )
         if preliminary is not Decision.ALLOW or chat_type == "private":
             return preliminary
+        if not await self.services.repository.is_media_category_enabled(
+            chat_id, _media_category(source)
+        ):
+            return Decision.IGNORE
         try:
             member = await context.bot.get_chat_member(chat_id, context.bot.id)
         except Exception:
@@ -200,15 +252,11 @@ class Commands:
         reply_to: int,
     ) -> None:
         euros = await self.services.exchange.jpy_to_eur(product.price_jpy)
-        lines = [f"<b>{html.escape(product.name)}</b>"]
-        if product.manufacturer:
-            lines.append(html.escape(product.manufacturer))
-        lines.extend([_yen(product.price_jpy), f"≈ €{euros:,.2f}"])
         await self.services.publisher.send_photos(
             chat_id,
             reply_to,
             product.images,
-            "\n".join(lines),
+            _product_caption(product, euros),
         )
 
     async def _publish_post(self, post: PostResult, chat_id: int, reply_to: int) -> None:
@@ -248,3 +296,46 @@ def _limit(text: str, limit: int) -> str:
 
 def _yen(value: Decimal) -> str:
     return f"¥{value:,.0f}"
+
+
+def _media_category(source: SourceKind) -> MediaCategory:
+    if source in {SourceKind.AMIAMI, SourceKind.NIN_NIN}:
+        return "figures"
+    return "social"
+
+
+def _product_caption(product: ProductResult, euros: Decimal) -> str:
+    details = [_yen(product.price_jpy), f"≈ €{euros:,.2f}"]
+    if product.manufacturer:
+        details.append(_escape_to_limit(product.manufacturer, 160))
+
+    detail_text = "\n".join(details)
+    title_budget = CAPTION_LIMIT - len("<b></b>\n") - len(detail_text)
+    title = _escape_to_limit(product.name, max(1, title_budget))
+    base_lines = [f"<b>{title}</b>", *details]
+    base_caption = "\n".join(base_lines)
+
+    if product.translated_name:
+        translated = f"<i>{html.escape(product.translated_name)}</i>"
+        translated_caption = "\n".join([base_lines[0], translated, *details])
+        if len(translated_caption) <= CAPTION_LIMIT:
+            return translated_caption
+    return base_caption
+
+
+def _escape_to_limit(value: str, limit: int) -> str:
+    escaped = html.escape(value)
+    if len(escaped) <= limit:
+        return escaped
+    if limit <= 1:
+        return "…"[:limit]
+
+    pieces: list[str] = []
+    used = 0
+    for character in value:
+        piece = html.escape(character)
+        if used + len(piece) > limit - 1:
+            break
+        pieces.append(piece)
+        used += len(piece)
+    return f"{''.join(pieces)}…"

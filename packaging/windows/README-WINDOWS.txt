@@ -13,6 +13,25 @@ FIRST SETUP
    user ID when prompted. The token and API hash are not displayed as you type.
 4. Setup creates or refreshes four Desktop shortcuts.
 
+TELEGRAM GROUP SETUP
+1. In BotFather, run /setprivacy, select this bot, and choose Disable. This is
+   required so Telegram delivers ordinary link messages instead of commands only.
+2. In BotFather /setcommands, add approve, revoke, social_off, social_on,
+   figures_off, and figures_on as listed in the project README.
+3. Add the bot to the desired groups as an ordinary member, never as an admin.
+4. The owner sends /approve once in each approved group. Use /revoke to disable it.
+
+PER-GROUP MEDIA SWITCHES
+Both categories begin enabled. Only the configured owner can use these commands:
+- /social_off and /social_on control TikTok, Facebook, and X.
+- /figures_off and /figures_on control AmiAmi and Nin-Nin Game.
+Links from a disabled category are silently ignored. The choices persist across
+restarts and upgrades. Revoking and later reapproving a group resets both to enabled.
+
+Members use the bot by sending one supported HTTPS link by itself. The bot silently
+ignores ordinary conversation, unsupported links, unapproved groups, and messages
+containing more than one link. It does not log message text.
+
 DAILY USE
 - Start W Bot: starts the bot and local Telegram API in the background.
 - Stop W Bot: safely stops both background services.
@@ -32,7 +51,7 @@ If it fails, read the short error, check the internet connection, and try Start
 again. Later starts reuse the completed handover.
 
 FILES, MOVES, AND UPGRADES
-Configuration, group approvals, and Telegram API state live under data\. Never
+Configuration, group approvals, media switches, and Telegram API state live under data\. Never
 share data\settings.json. Its secrets are protected for the current Windows user
 with DPAPI, so another Windows account or computer cannot decrypt them.
 

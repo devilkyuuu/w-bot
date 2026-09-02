@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "telegram-w-media-bot"
 version = "0.1.0"
-description = "Private Telegram /w media bot"
+description = "Private Telegram bare-link media bot"
 requires-python = ">=3.11,<3.13"
 dependencies = [
   "beautifulsoup4>=4.13,<5",

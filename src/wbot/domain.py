@@ -42,6 +42,7 @@ class ProductResult:
     manufacturer: str | None
     price_jpy: Decimal
     images: tuple[MediaAsset, ...]
+    translated_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
