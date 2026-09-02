@@ -8,8 +8,9 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 
 - Telegram Group Privacy Mode is disabled so bare link messages reach the bot.
 - The bot is never a group administrator.
-- Normal users send one supported HTTPS link by itself; `/approve` and `/revoke` remain owner-only commands.
+- Normal users send one supported HTTPS link by itself; all administrative commands remain owner-only.
 - The bot processes supported links only in owner-approved groups and in the owner's private chat for testing.
+- Each approved group independently enables or disables social media (TikTok, Facebook, and X) and figure websites (AmiAmi and Nin-Nin); both default to enabled.
 - Unapproved groups receive no response.
 - Owner-only approval and revocation commands may send a one-line administrative acknowledgement.
 - Ordinary group conversation and unsupported links are immediately ignored and are not logged or stored.
@@ -62,6 +63,8 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 
 - Supported syntax: one standalone supported HTTPS URL.
 - Missing, malformed, multiple, and unsupported URLs are silent.
+- Links in a category disabled for that group are silent and perform no retrieval work.
+- `/social_off`, `/social_on`, `/figures_off`, and `/figures_on` change the current approved group's persistent switches and acknowledge the owner with one short line.
 - Source failures receive a short error reply.
 - The bot replies to the link message so the result retains context.
 - No `Getting the video…`, progress update, success acknowledgement, or explanatory footer.
@@ -72,7 +75,7 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 - Use bounded downloads and timeouts.
 - Delete temporary files after success, after failure, and during startup recovery.
 - Do not retain downloaded videos, images, post text, or original URLs.
-- Persist only owner-approved group IDs, minimal administrative audit timestamps, and a cached ECB exchange rate.
+- Persist only owner-approved group IDs, per-group category switches, minimal administrative audit timestamps, and a cached ECB exchange rate.
 - Escape all external text before using Telegram HTML formatting.
 
 ## Hosting
@@ -87,6 +90,7 @@ Build a private Telegram bot for an owner-approved set of group chats. A user se
 
 - Privacy Mode is visibly disabled and the bot is not an administrator.
 - A bare supported link works in an approved test group and is silent in an unapproved group.
+- Each owner-only category switch affects only its current group, survives restart, and can be enabled again.
 - A public video over 50 MB and at most 5 minutes is posted as a playable Telegram video.
 - Videos over 5 minutes are rejected before the full download whenever metadata permits.
 - AmiAmi and Nin-Nin sample products each return up to 5 ordered gallery images with the required caption.

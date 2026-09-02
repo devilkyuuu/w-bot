@@ -66,6 +66,10 @@ def build_application(settings: Settings) -> Application[Any, Any, Any, Any, Any
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, commands.media))
     application.add_handler(CommandHandler("approve", commands.approve))
     application.add_handler(CommandHandler("revoke", commands.revoke))
+    application.add_handler(CommandHandler("social_off", commands.social_off))
+    application.add_handler(CommandHandler("social_on", commands.social_on))
+    application.add_handler(CommandHandler("figures_off", commands.figures_off))
+    application.add_handler(CommandHandler("figures_on", commands.figures_on))
     application.bot_data["services"] = services
     return application
 

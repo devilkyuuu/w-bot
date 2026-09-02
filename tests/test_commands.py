@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from wbot.access import Decision
+from wbot.access import AccessPolicy, Decision
 from wbot.commands import BotServices, Commands
 
 
@@ -29,6 +29,33 @@ class CountingAccess:
         del kwargs
         self.calls += 1
         return Decision.ALLOW
+
+
+@dataclass
+class ToggleRepository:
+    approved: bool = True
+    changes: list[tuple[int, str, bool]] = field(default_factory=list)
+
+    async def is_chat_approved(self, chat_id: int) -> bool:
+        del chat_id
+        return self.approved
+
+    async def set_media_category_enabled(
+        self, chat_id: int, category: str, *, enabled: bool
+    ) -> None:
+        self.changes.append((chat_id, category, enabled))
+
+
+@dataclass
+class FilteringRepository(ToggleRepository):
+    enabled: dict[str, bool] = field(
+        default_factory=lambda: {"social": True, "figures": True}
+    )
+    checks: list[tuple[int, str]] = field(default_factory=list)
+
+    async def is_media_category_enabled(self, chat_id: int, category: str) -> bool:
+        self.checks.append((chat_id, category))
+        return self.enabled[category]
 
 
 @pytest.mark.asyncio
@@ -58,6 +85,114 @@ async def test_non_media_messages_are_silent_before_access_checks(text: str) -> 
     await Commands(services).media(cast(Any, update), cast(Any, context))
 
     assert access.calls == 0
+    assert message.replies == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method_name", "category", "enabled", "reply"),
+    [
+        ("social_off", "social", False, "Social media disabled."),
+        ("social_on", "social", True, "Social media enabled."),
+        ("figures_off", "figures", False, "Figure websites disabled."),
+        ("figures_on", "figures", True, "Figure websites enabled."),
+    ],
+)
+async def test_owner_can_change_category_for_current_approved_group(
+    method_name: str,
+    category: str,
+    enabled: bool,
+    reply: str,
+) -> None:
+    repository = ToggleRepository()
+    access = AccessPolicy(42, repository)
+    message = RecordingMessage(f"/{method_name}")
+    update = SimpleNamespace(
+        effective_message=message,
+        effective_user=SimpleNamespace(id=42),
+        effective_chat=SimpleNamespace(id=-1007, type="supergroup"),
+    )
+    services = cast(
+        BotServices,
+        SimpleNamespace(access=access, repository=repository),
+    )
+
+    command = getattr(Commands(services), method_name)
+    await command(cast(Any, update), cast(Any, SimpleNamespace()))
+
+    assert repository.changes == [(-1007, category, enabled)]
+    assert message.replies == [reply]
+
+
+@pytest.mark.asyncio
+async def test_non_owner_cannot_change_category() -> None:
+    repository = ToggleRepository()
+    access = AccessPolicy(42, repository)
+    message = RecordingMessage("/social_off")
+    update = SimpleNamespace(
+        effective_message=message,
+        effective_user=SimpleNamespace(id=99),
+        effective_chat=SimpleNamespace(id=-1007, type="group"),
+    )
+    services = cast(
+        BotServices,
+        SimpleNamespace(access=access, repository=repository),
+    )
+
+    await Commands(services).social_off(cast(Any, update), cast(Any, SimpleNamespace()))
+
+    assert repository.changes == []
+    assert message.replies == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("link", "disabled_category"),
+    [
+        ("https://www.tiktok.com/@alice/video/123", "social"),
+        ("https://www.facebook.com/watch/?v=123", "social"),
+        ("https://x.com/alice/status/123", "social"),
+        ("https://www.amiami.com/eng/detail?gcode=FIGURE-207185", "figures"),
+        (
+            "https://www.nin-nin-game.com/en/nendoroid/254320-product.html",
+            "figures",
+        ),
+    ],
+)
+async def test_disabled_category_links_are_silent_before_admin_or_media_work(
+    link: str,
+    disabled_category: str,
+) -> None:
+    repository = FilteringRepository()
+    repository.enabled[disabled_category] = False
+    access = AccessPolicy(42, repository)
+    message = RecordingMessage(link)
+    update = SimpleNamespace(
+        effective_message=message,
+        effective_user=SimpleNamespace(id=99),
+        effective_chat=SimpleNamespace(id=-1007, type="supergroup"),
+    )
+
+    class RecordingBot:
+        id = 500
+        admin_checks = 0
+
+        async def get_chat_member(self, *args: Any) -> Any:
+            del args
+            self.admin_checks += 1
+            return SimpleNamespace(status="member")
+
+    bot = RecordingBot()
+    context = SimpleNamespace(bot=bot)
+    services = cast(
+        BotServices,
+        SimpleNamespace(access=access, repository=repository),
+    )
+
+    await Commands(services).media(cast(Any, update), cast(Any, context))
+
+    assert repository.checks == [(-1007, disabled_category)]
+    assert bot.admin_checks == 0
     assert message.replies == []
 
 

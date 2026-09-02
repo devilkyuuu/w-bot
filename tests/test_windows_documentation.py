@@ -69,7 +69,7 @@ def test_documentation_uses_bare_links_and_disables_group_privacy() -> None:
 
     northflank = (ROOT / "northflank" / "README.md").read_text(encoding="utf-8")
     assert "/setprivacy` is **Disabled**" in northflank
-    assert "the two commands shown in the root README" in northflank
+    assert "the six commands shown in the root README" in northflank
     assert "w - Show content" not in readme
 
 

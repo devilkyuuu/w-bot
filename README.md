@@ -74,6 +74,10 @@ user and machine.
    ```text
    approve - Allow this group (owner only)
    revoke - Remove this group (owner only)
+   social_off - Disable TikTok, Facebook and X here (owner only)
+   social_on - Enable TikTok, Facebook and X here (owner only)
+   figures_off - Disable AmiAmi and Nin-Nin here (owner only)
+   figures_on - Enable AmiAmi and Nin-Nin here (owner only)
    ```
 
 4. Add the bot to a group as an ordinary member. Never grant administrator rights.
@@ -82,7 +86,12 @@ user and machine.
 Telegram delivers ordinary group text to the bot after Privacy Mode is disabled. The bot checks
 locally for one supported standalone link, silently ignores everything else, and does not log
 message text. It also ignores unapproved groups and other users' private chats. It stores only
-approved numeric group IDs in a small local SQLite database.
+approved numeric group IDs and per-group media switches in a small local SQLite database.
+
+Both media categories start enabled. The owner can use `/social_off` and `/social_on` to control
+TikTok, Facebook, and X for the current approved group. `/figures_off` and `/figures_on` control
+AmiAmi and Nin-Nin Game. Disabled-category links are silently ignored, and each group's choices
+survive restarts. `/revoke` removes the approval and resets these choices for a later reapproval.
 
 ## Supported link messages
 

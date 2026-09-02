@@ -12,7 +12,7 @@ from telegram.ext import ContextTypes
 
 from wbot.access import AccessPolicy, Decision
 from wbot.config import Settings
-from wbot.database import ApprovalRepository
+from wbot.database import ApprovalRepository, MediaCategory
 from wbot.domain import PostResult, ProductResult, SourceKind, SupportedUrl
 from wbot.errors import ERROR_TEXT, BotError, ErrorCode
 from wbot.exchange import ExchangeService
@@ -59,7 +59,9 @@ class Commands:
         except (RequestSyntaxError, UnsupportedUrlError):
             return
 
-        decision = await self._access_decision(user.id, chat.id, chat.type, context)
+        decision = await self._access_decision(
+            user.id, chat.id, chat.type, supported.kind, context
+        )
         if decision is Decision.IGNORE:
             return
         if decision is Decision.BOT_MUST_NOT_BE_ADMIN:
@@ -136,11 +138,61 @@ class Commands:
         await self.services.repository.revoke_chat(chat.id)
         await message.reply_text("Revoked.")
 
+    async def social_off(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "social", enabled=False)
+
+    async def social_on(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "social", enabled=True)
+
+    async def figures_off(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "figures", enabled=False)
+
+    async def figures_on(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        await self._set_media_category(update, context, "figures", enabled=True)
+
+    async def _set_media_category(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        category: MediaCategory,
+        *,
+        enabled: bool,
+    ) -> None:
+        del context
+        message = update.effective_message
+        user = update.effective_user
+        chat = update.effective_chat
+        if message is None or user is None or chat is None:
+            return
+        if not self.services.access.can_manage(user.id) or chat.type not in {
+            "group",
+            "supergroup",
+        }:
+            return
+        if not await self.services.repository.is_chat_approved(chat.id):
+            return
+
+        await self.services.repository.set_media_category_enabled(
+            chat.id, category, enabled=enabled
+        )
+        labels = {"social": "Social media", "figures": "Figure websites"}
+        state = "enabled" if enabled else "disabled"
+        await message.reply_text(f"{labels[category]} {state}.")
+
     async def _access_decision(
         self,
         user_id: int,
         chat_id: int,
         chat_type: str,
+        source: SourceKind,
         context: ContextTypes.DEFAULT_TYPE,
     ) -> Decision:
         preliminary = await self.services.access.evaluate(
@@ -151,6 +203,10 @@ class Commands:
         )
         if preliminary is not Decision.ALLOW or chat_type == "private":
             return preliminary
+        if not await self.services.repository.is_media_category_enabled(
+            chat_id, _media_category(source)
+        ):
+            return Decision.IGNORE
         try:
             member = await context.bot.get_chat_member(chat_id, context.bot.id)
         except Exception:
@@ -240,6 +296,12 @@ def _limit(text: str, limit: int) -> str:
 
 def _yen(value: Decimal) -> str:
     return f"¥{value:,.0f}"
+
+
+def _media_category(source: SourceKind) -> MediaCategory:
+    if source in {SourceKind.AMIAMI, SourceKind.NIN_NIN}:
+        return "figures"
+    return "social"
 
 
 def _product_caption(product: ProductResult, euros: Decimal) -> str:

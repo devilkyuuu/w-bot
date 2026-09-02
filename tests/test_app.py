@@ -39,6 +39,20 @@ async def test_application_routes_text_messages_without_registering_w_command(
             isinstance(handler, CommandHandler) and "w" in handler.commands
             for handler in handlers
         )
+        registered_commands = {
+            command
+            for handler in handlers
+            if isinstance(handler, CommandHandler)
+            for command in handler.commands
+        }
+        assert {
+            "approve",
+            "revoke",
+            "social_off",
+            "social_on",
+            "figures_off",
+            "figures_on",
+        } <= registered_commands
     finally:
         services = application.bot_data["services"]
         publisher = cast(Publisher, services.publisher)

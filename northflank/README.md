@@ -21,7 +21,7 @@ Northflank runtime secrets.
 Create a PostgreSQL addon named `wbot-db`. It does not need public access. Link its `POSTGRES_URI`
 connection value to the bot service with the alias `DATABASE_URL`.
 
-The bot creates its two small tables automatically when it starts.
+The bot creates its three small tables automatically when it starts.
 
 ## 3. Create the Local Bot API service
 
@@ -86,10 +86,14 @@ Deploy `telegram-api` first. When its logs say the Bot API server has started, d
 In BotFather:
 
 1. Confirm `/setprivacy` is **Disabled** so Telegram delivers bare group links to the bot.
-2. Set `/setcommands` to the two commands shown in the root README.
+2. Set `/setcommands` to the six commands shown in the root README.
 3. Add the bot to the intended group as a normal member, without administrator rights.
 4. As the owner, send `/approve` once in the group.
 5. Send one supported public HTTPS link by itself.
+
+Both categories begin enabled per approved group. The owner can use `/social_off` and
+`/social_on` for TikTok, Facebook, and X, or `/figures_off` and `/figures_on` for AmiAmi and
+Nin-Nin Game. Disabled-category links are silent and the choices persist in the database.
 
 The normal result is a direct reply containing the playable video, X content, or product album.
 There is no progress message.
